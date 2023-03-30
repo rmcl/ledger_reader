@@ -2,12 +2,19 @@
 
 A simple parser for hledger journal files. It's always fun to play with rply and use a simple grammar. PR's welcome :).
 
+## Install
+
+```
+pip install ledger-reader
+```
+
 ## Example usage
 
 
 ### Read a journal
 
 ```python
+from ledger_reader import LedgerReader
 
 reader = LedgerReader()
 journal = reader.parse_file('bank.journal')
