@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="ledger_reader",
-    version="0.10.0",
+    version="0.1",
     author="Russell McLoughlin",
     author_email="russ.mcl@gmail.com",
     description="A simple parser for hledger journal files.",
@@ -22,7 +22,6 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
-        "Topic :: Topic :: Office/Business :: Financial :: Accounting",
     ],
     python_requires='>=3.7',
 )
