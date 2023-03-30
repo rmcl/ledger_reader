@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="ledger_reader",
-    version="0.1",
+    version="0.2",
     author="Russell McLoughlin",
     author_email="russ.mcl@gmail.com",
     description="A simple parser for hledger journal files.",
