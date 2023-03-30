@@ -1,4 +1,5 @@
 """A parser for the ledger file format."""
+from re import match
 from datetime import datetime
 from decimal import Decimal
 from rply import LexerGenerator, ParserGenerator
@@ -40,23 +41,22 @@ class Transaction:
 class LedgerReader:
     """A parser for the ledger file format."""
 
+    entry_header_re = r"(\d+[/\-]\d+[/-]\d+)\ +(.*)"
+
     def get_lexer(self):
         lg = LexerGenerator()
 
-        lg.add("DATE", r"\d+[/\-]\d+[/-]\d+")
+        lg.add("ENTRY_HEADER", self.entry_header_re)
 
         lg.add("CURRENCY", r"EUR|\$")
-        #lg.add("NUMBER", r"-?\d+(\.\d+)?")
-        #lg.add("NUMBER", r"^-?(\d+|\d{1,3}(,\d{3})*)(\.\d+)?")
-        lg.add("NUMBER", r"-?[0-9]+,?[0-9]+(\.\d+)?")
+        lg.add("NUMBER", r"-?\d+(,\d{3})*(\.\d+)?")
 
-        lg.add("TEXT", r"\w[\w\d\.\,\/\:\-]*")
+        lg.add("ACCOUNT", r"[a-zA-Z][\$\#\w\d\.\,\/\:\-]+")
         lg.add('NEWLINE', r'\n[\ \r\t]*')
         lg.add('WHITESPACE', r'[\ \t]+')
 
         # Comments - Ignore remainder of line starting with "#".
         lg.ignore(r"\;.*\n")
-
 
         lexer = lg.build()
         return lexer
@@ -64,17 +64,18 @@ class LedgerReader:
 
     def get_parser(self):
         tokens = [
-            "DATE",
+            "ENTRY_HEADER",
+            "ACCOUNT",
             "CURRENCY",
             "NUMBER",
-            "TEXT",
             "INDENT"
+
         ]
         pg = ParserGenerator(tokens, precedence=[])
 
         @pg.error
         def error_handler(token):
-            raise ValueError("Ran into a %s where it wasn't expected" % token.gettokentype())
+            raise ValueError("Ran into a %s where it wasn't expected. %s" % (token.gettokentype(), token))
 
         @pg.production("Journal : Entries")
         def main(p):
@@ -101,14 +102,21 @@ class LedgerReader:
         def transactions_single(p):
             return [p[0]]
 
-        @pg.production("Transaction : INDENT TEXT CURRENCY NUMBER")
-        @pg.production("Transaction : INDENT TEXT")
+        @pg.production("Transaction : INDENT ACCOUNT CURRENCY NUMBER")
+        @pg.production("Transaction : INDENT ACCOUNT NUMBER")
+        @pg.production("Transaction : INDENT ACCOUNT")
         def transaction(p):
             if len(p) == 4:
                 amount = Decimal(p[3].value.replace(',', ''))
                 return Transaction(
-                    p[1].value,
-                    p[2].value,
+                    p[1].value.strip(),
+                    p[2].value.strip(),
+                    amount)
+            if len(p) == 3:
+                amount = Decimal(p[2].value.replace(',', ''))
+                return Transaction(
+                    p[1].value.strip(),
+                    None,
                     amount)
             else:
                 return Transaction(
@@ -116,29 +124,18 @@ class LedgerReader:
                     None,
                     None)
 
-        @pg.production("Header : DATE Description")
-        @pg.production("Header : DATE")
+        @pg.production("Header : ENTRY_HEADER")
         def header(p):
-            entry_date = datetime.strptime(p[0].value, "%Y-%m-%d")
-            if len(p) == 1:
-                return (entry_date, None)
-            else:
-                return (entry_date, p[1])
-
-        @pg.production("Description : Description TEXT")
-        @pg.production("Description : TEXT")
-        def description(p):
-            if len(p) == 1:
-                return p[0].value
-            else:
-                return p[0] + ' ' + p[1].value
-
+            results = match(self.entry_header_re, p[0].value.strip())
+            entry_date = datetime.strptime(results.group(1).strip(), "%Y-%m-%d")
+            return (entry_date, results.group(2).strip())
 
         parser = pg.build()
         return parser
 
     def process_whitespace(self, tokens):
         """Given a stream of tokens convert whitespace to INDENT tokens."""
+
         for token in tokens:
             if token.name == 'WHITESPACE':
                 continue
