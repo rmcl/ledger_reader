@@ -1,0 +1,9 @@
+*.pyc
+**.pyc
+*.sqlite3
+venv
+.pydevproject
+.project
+.settings
+.pytest_cache
+__pycache__
