@@ -21,16 +21,21 @@ class Entry:
         self.transactions = transactions
 
     def __repr__(self):
-        return f"Entry({self.date}, {self.description})"
+        result = f"{self.date}  {self.description}\n"
+        for transaction in self.transactions:
+            result += f"    {transaction}\n"
+        return result
 
 class Transaction:
-    def __init__(self, account, currency, amount):
+    def __init__(self, account, currency = None, amount = None):
         self.account = account
         self.currency = currency
         self.amount = amount
 
     def __repr__(self):
-        return f"Transaction({self.account}, {self.currency}, {self.amount})"
+        cur = self.currency if self.currency else ""
+        amt = self.amount if self.amount else ""
+        return f"{self.account} {cur}{amt}"
 
 class LedgerReader:
     """A parser for the ledger file format."""
